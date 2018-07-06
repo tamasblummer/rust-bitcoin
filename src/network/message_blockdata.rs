@@ -132,6 +132,84 @@ impl<D: SimpleDecoder> ConsensusDecodable<D> for Inventory {
     }
 }
 
+/// BIP157 getcfilters message
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct GetFiltersMessage {
+    /// filter type
+    pub filter_type: u8,
+    /// start height of the block chain
+    pub start_height: u32,
+    /// hash of the last requested block
+    pub stop_hash: Sha256dHash
+}
+
+impl_consensus_encoding!(GetFiltersMessage, filter_type, start_height, stop_hash);
+
+/// BIP157 cfilter message
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct GetFilterHeadersMessage {
+    /// filter type
+    pub filter_type: u8,
+    /// start height of the block chain
+    pub block_hash: Sha256dHash,
+    /// hash of the last requested block
+    pub stop_hash: Sha256dHash
+}
+
+impl_consensus_encoding!(GetFilterHeadersMessage, filter_type, block_hash, stop_hash);
+
+/// BIP157 cfilter message
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct FilterMessage {
+    /// filter type
+    pub filter_type: u8,
+    /// requested block filter
+    pub block_hash: Sha256dHash,
+    /// content of the filter
+    pub content: Vec<u8>
+}
+
+impl_consensus_encoding!(FilterMessage, filter_type, block_hash, content);
+
+/// BIP157 cfheaders message
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct FilterHeadersMessage {
+    /// filter type
+    pub filter_type: u8,
+    /// hash of the last requested block
+    pub stop_hash: Sha256dHash,
+    /// hash of the block preceding the first block of the requested range
+    pub previous_hash: Sha256dHash,
+    /// filter header hashes
+    pub headers: Vec<Sha256dHash>
+}
+
+impl_consensus_encoding!(FilterHeadersMessage, filter_type, stop_hash, previous_hash, headers);
+
+/// BIP157 getcfcheckpt
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct GetFilterCheckpointsMessage {
+    /// filter type
+    pub filter_type: u8,
+    /// hash of the last requested block
+    pub stop_hash: Sha256dHash,
+}
+
+impl_consensus_encoding!(GetFilterCheckpointsMessage, filter_type, stop_hash);
+
+/// BIP157 cfcheckpt
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct FilterCheckpointsMessage {
+    /// filter type
+    pub filter_type: u8,
+    /// hash of the last requested block
+    pub stop_hash: Sha256dHash,
+    /// filter header hashes
+    pub headers: Vec<Sha256dHash>
+}
+
+impl_consensus_encoding!(FilterCheckpointsMessage, filter_type, stop_hash, headers);
+
 #[cfg(test)]
 mod tests {
     use super::{GetHeadersMessage, GetBlocksMessage};
