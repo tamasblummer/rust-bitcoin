@@ -119,7 +119,19 @@ pub enum NetworkMessage {
     // TODO: bloom filtering
     // TODO: alert
     /// `alert`
-    Alert(Vec<u8>)
+    Alert(Vec<u8>),
+    /// `getcfilters`
+    GetFilters(message_blockdata::GetFiltersMessage),
+    /// `cfilter`
+    Filter(message_blockdata::FilterMessage),
+    /// `getcfheaders`
+    GetFilterHeaders(message_blockdata::GetFilterHeadersMessage),
+    /// `cfheaders`
+    FilterHeaders(message_blockdata::FilterHeadersMessage),
+    /// `getcfcheckpt`
+    GetFilterCheckpoints(message_blockdata::GetFilterCheckpointsMessage),
+    /// `cfcheckpt`
+    FilterCheckpoints(message_blockdata::FilterCheckpointsMessage),
 }
 
 impl RawNetworkMessage {
@@ -142,6 +154,12 @@ impl RawNetworkMessage {
             NetworkMessage::Ping(_)    => "ping",
             NetworkMessage::Pong(_)    => "pong",
             NetworkMessage::Alert(_)    => "alert",
+            NetworkMessage::GetFilters(_) => "getcfilters",
+            NetworkMessage::Filter(_) => "cfilter",
+            NetworkMessage::GetFilterHeaders(_) => "getcfheaders",
+            NetworkMessage::FilterHeaders(_) => "cfheaders",
+            NetworkMessage::GetFilterCheckpoints(_) => "getcfcheckpt",
+            NetworkMessage::FilterCheckpoints(_) => "cfcheckpt"
         }.to_owned()
     }
 }
@@ -166,7 +184,13 @@ impl<S: SimpleEncoder> ConsensusEncodable<S> for RawNetworkMessage {
             NetworkMessage::GetAddr          => Ok(vec![]),
             NetworkMessage::Ping(ref dat)    => serialize(dat),
             NetworkMessage::Pong(ref dat)    => serialize(dat),
-            NetworkMessage::Alert(ref dat)    => serialize(dat)
+            NetworkMessage::Alert(ref dat)    => serialize(dat),
+            NetworkMessage::GetFilters(ref dat) => serialize(dat),
+            NetworkMessage::Filter(ref dat) => serialize(dat),
+            NetworkMessage::GetFilterHeaders(ref dat) => serialize(dat),
+            NetworkMessage::FilterHeaders(ref dat) => serialize(dat),
+            NetworkMessage::GetFilterCheckpoints(ref dat) => serialize(dat),
+            NetworkMessage::FilterCheckpoints(ref dat) => serialize(dat)
         }.unwrap()).consensus_encode(s));
         Ok(())
     }
@@ -198,6 +222,12 @@ impl<D: SimpleDecoder<Error=util::Error>> ConsensusDecodable<D> for RawNetworkMe
             "pong"    => NetworkMessage::Pong(try!(propagate_err("pong".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
             "tx"      => NetworkMessage::Tx(try!(propagate_err("tx".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
             "alert"   => NetworkMessage::Alert(try!(propagate_err("alert".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
+            "getcfilters" => NetworkMessage::GetFilters(try!(propagate_err("getcfilters".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
+            "cfilter" => NetworkMessage::Filter(try!(propagate_err("cfilter".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
+            "getcfheaders" => NetworkMessage::GetFilterHeaders(try!(propagate_err("getcfheaders".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
+            "cfheaders" => NetworkMessage::FilterHeaders(try!(propagate_err("cfheaders".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
+            "getcfcheckpt" => NetworkMessage::GetFilterCheckpoints(try!(propagate_err("getcfcheckpt".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
+            "cfcheckpt" => NetworkMessage::FilterCheckpoints(try!(propagate_err("cfcheckpt".to_owned(), ConsensusDecodable::consensus_decode(&mut mem_d)))),
             cmd => return Err(d.error(format!("unrecognized network command `{}`", cmd)))
         };
         Ok(RawNetworkMessage {
