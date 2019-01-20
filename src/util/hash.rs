@@ -420,18 +420,6 @@ pub fn bitcoin_merkle_root(data: Vec<Sha256dHash>) -> Sha256dHash {
     bitcoin_merkle_root(next)
 }
 
-impl<'a, T: BitcoinHash> MerkleRoot for &'a [T] {
-    fn merkle_root(&self) -> Sha256dHash {
-        bitcoin_merkle_root(self.iter().map(|obj| obj.bitcoin_hash()).collect())
-    }
-}
-
-impl <T: BitcoinHash> MerkleRoot for Vec<T> {
-    fn merkle_root(&self) -> Sha256dHash {
-        (&self[..]).merkle_root()
-    }
-}
-
 /// Objects which are referred to by hash
 pub trait BitcoinHash {
     /// Produces a Sha256dHash which can be used to refer to the object
