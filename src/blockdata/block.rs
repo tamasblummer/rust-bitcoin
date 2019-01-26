@@ -22,9 +22,9 @@
 
 use util;
 use util::Error::{SpvBadTarget, SpvBadProofOfWork};
-use util::hash::{BitcoinHash, Sha256dHash};
+use util::hash::{BitcoinHash, Sha256dHash, MerkleRoot, bitcoin_merkle_root, Sha256dEncoder};
 use util::uint::Uint256;
-use consensus::encode::VarInt;
+use consensus::encode::{VarInt, Encodable};
 use network::constants::Network;
 use blockdata::transaction::Transaction;
 use blockdata::constants::max_target;
@@ -56,6 +56,62 @@ pub struct Block {
     pub header: BlockHeader,
     /// List of transactions contained in the block
     pub txdata: Vec<Transaction>
+}
+
+impl Block {
+    /// check if merkle root of header matches merkle root of the transaction list
+    pub fn check_merkle_root (&self) -> bool {
+        self.header.merkle_root == self.merkle_root()
+    }
+
+    /// check if witness commitment in coinbase is matching the transaction list
+    pub fn check_witness_commitment(&self) -> bool {
+
+        // witness commitment is optional if there are no transactions using SegWit in the block
+        if self.txdata.iter().any(|t| t.input.iter().any(|i| !i.witness.is_empty())) == false {
+            return true;
+        }
+        if self.txdata.len() > 0 {
+            let coinbase = &self.txdata[0];
+            if coinbase.is_coin_base() {
+                // commitment is in the last output that starts with below magic
+                if let Some(pos) = coinbase.output.iter()
+                    .rposition(|o| {
+                        o.script_pubkey.as_bytes().len () >= 38 &&
+                        o.script_pubkey.as_bytes()[0..6] == [0x6a, 0x24, 0xaa, 0x21, 0xa9, 0xed] }) {
+                    let commitment = Sha256dHash::from(&coinbase.output[pos].script_pubkey.as_bytes()[6..38]);
+                    // witness reserved value is in coinbase input witness
+                    if coinbase.input[0].witness.len() == 1 && coinbase.input[0].witness[0].len() == 32 {
+                        let witness_reserved_value = Sha256dHash::from(coinbase.input[0].witness[0].as_slice());
+                        let witness_root = self.witness_root();
+                        return commitment == self.compute_witness_commitment(&witness_root, &witness_reserved_value)
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// compute witness commitment for the transaction list
+    pub fn compute_witness_commitment (&self, witness_root: &Sha256dHash, witness_reserved_value: &Sha256dHash) -> Sha256dHash {
+        let mut encoder = Sha256dEncoder::new();
+        witness_root.consensus_encode(&mut encoder).unwrap();
+        witness_reserved_value.consensus_encode(&mut encoder).unwrap();
+        encoder.into_hash()
+    }
+
+    /// Merkle root of transactions hashed for witness
+    pub fn witness_root(&self) -> Sha256dHash {
+        let mut txhashes = vec!(Sha256dHash::default());
+        txhashes.extend(self.txdata.iter().skip(1).map(|t|t.bitcoin_hash()));
+        bitcoin_merkle_root(txhashes)
+    }
+}
+
+impl MerkleRoot for Block {
+    fn merkle_root(&self) -> Sha256dHash {
+        bitcoin_merkle_root(self.txdata.iter().map(|obj| obj.txid()).collect())
+    }
 }
 
 /// A block header with txcount attached, which is given in the `headers`
@@ -163,6 +219,7 @@ mod tests {
 
     use blockdata::block::{Block, BlockHeader};
     use consensus::encode::{deserialize, serialize};
+    use util::hash::MerkleRoot;
 
     #[test]
     fn block_test() {
@@ -180,13 +237,16 @@ mod tests {
         let real_decode = decode.unwrap();
         assert_eq!(real_decode.header.version, 1);
         assert_eq!(serialize(&real_decode.header.prev_blockhash), prevhash);
-        // [test] TODO: actually compute the merkle root
+        assert_eq!(real_decode.header.merkle_root, real_decode.merkle_root());
         assert_eq!(serialize(&real_decode.header.merkle_root), merkle);
         assert_eq!(real_decode.header.time, 1231965655);
         assert_eq!(real_decode.header.bits, 486604799);
         assert_eq!(real_decode.header.nonce, 2067413810);
         // [test] TODO: check the transaction data
-    
+
+        // should be also ok for a non-witness block as commitment is optional in that case
+        assert!(real_decode.check_witness_commitment());
+
         assert_eq!(serialize(&real_decode), some_block);
     }
 
@@ -205,10 +265,13 @@ mod tests {
         assert_eq!(real_decode.header.version, 0x20000000);  // VERSIONBITS but no bits set
         assert_eq!(serialize(&real_decode.header.prev_blockhash), prevhash);
         assert_eq!(serialize(&real_decode.header.merkle_root), merkle);
+        assert_eq!(real_decode.header.merkle_root, real_decode.merkle_root());
         assert_eq!(real_decode.header.time, 1472004949);
         assert_eq!(real_decode.header.bits, 0x1a06d450);
         assert_eq!(real_decode.header.nonce, 1879759182);
         // [test] TODO: check the transaction data
+
+        assert!(real_decode.check_witness_commitment());
 
         assert_eq!(serialize(&real_decode), segwit_block);
     }
