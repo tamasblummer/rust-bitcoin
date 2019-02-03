@@ -28,6 +28,7 @@ pub mod address;
 pub mod message;
 pub mod message_blockdata;
 pub mod message_network;
+pub mod stream_reader;
 
 /// Network error
 #[derive(Debug)]
