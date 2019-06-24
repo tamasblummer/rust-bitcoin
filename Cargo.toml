@@ -54,6 +54,4 @@ serde_json = "1"
 serde_test = "1"
 tempfile = "3"
 
-[patch.crates-io]
-bitcoin_hashes = { git="https://github.com/rust-bitcoin/bitcoin_hashes.git", branch="master"}
 
