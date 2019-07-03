@@ -161,7 +161,7 @@ impl <'a> BlockFilterWriter<'a> {
         for transaction in &self.block.txdata {
             for output in &transaction.output {
                 if !output.script_pubkey.is_op_return() {
-                    self.writer.add_element(output.script_pubkey.as_bytes());
+                    self.add_element(output.script_pubkey.as_bytes());
                 }
             }
         }
@@ -175,11 +175,16 @@ impl <'a> BlockFilterWriter<'a> {
             .flat_map(|t| t.input.iter().map(|i| &i.previous_output))
             .map(script_for_coin) {
             match script {
-                Ok(script) => self.writer.add_element(script.as_bytes()),
+                Ok(script) => self.add_element(script.as_bytes()),
                 Err(e) => return Err(e)
             }
         }
         Ok(())
+    }
+
+    /// add arbitrary element to the filter
+    pub fn add_element(&mut self, data: &[u8]) {
+        self.writer.add_element(data)
     }
 
     /// Write block filter
