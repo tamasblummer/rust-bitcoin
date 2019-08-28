@@ -35,6 +35,7 @@ use util::hash::BitcoinHash;
 use blockdata::script::Script;
 use consensus::{encode, serialize, Decodable, Encodable};
 use VarInt;
+use std::fmt::Debug;
 
 /// A reference to a transaction output
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -182,7 +183,7 @@ impl ::std::str::FromStr for OutPoint {
 }
 
 /// A transaction input, which defines old coins to be consumed
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TxIn {
     /// The reference to the previous output that is being used an an input
     pub previous_output: OutPoint,
@@ -202,6 +203,17 @@ pub struct TxIn {
     pub witness: Vec<Vec<u8>>
 }
 serde_struct_impl!(TxIn, previous_output, script_sig, sequence, witness);
+
+impl Debug for TxIn {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "TxIn {{ previous_output: {:?}, script_sig: {:?}, sequence: 0x{:x?}, witness: [{}, last item as script: {:?}] }}",
+               self.previous_output,
+               self.script_sig,
+               self.sequence,
+               self.witness.iter().map(|w| hex::encode(w)).collect::<Vec<String>>().join(", "),
+               self.witness.last().map(|v| Script::from(v.clone())).unwrap_or(Script::new()))
+    }
+}
 
 /// A transaction output, which defines new coins to be created from old ones.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
