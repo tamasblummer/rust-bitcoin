@@ -131,9 +131,7 @@ pub enum NetworkMessage {
     /// BIP157 cfcheckpt
     CFCheckpt(message_filter::CFCheckpt),
     /// `alert`
-    Alert(Vec<u8>),
-    /// `reject`
-    Reject(message_network::Reject)
+    Alert(Vec<u8>)
 }
 
 impl RawNetworkMessage {
@@ -163,7 +161,6 @@ impl RawNetworkMessage {
             NetworkMessage::GetCFCheckpt(_) => "getcfckpt",
             NetworkMessage::CFCheckpt(_) => "cfcheckpt",
             NetworkMessage::Alert(_)    => "alert",
-            NetworkMessage::Reject(_)    => "reject",
         }.to_owned()
     }
 }
@@ -214,7 +211,6 @@ impl Encodable for RawNetworkMessage {
             NetworkMessage::GetCFCheckpt(ref dat) => serialize(dat),
             NetworkMessage::CFCheckpt(ref dat) => serialize(dat),
             NetworkMessage::Alert(ref dat)    => serialize(dat),
-            NetworkMessage::Reject(ref dat) => serialize(dat),
             NetworkMessage::Verack
             | NetworkMessage::SendHeaders
             | NetworkMessage::MemPool
